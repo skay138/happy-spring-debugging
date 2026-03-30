@@ -1,0 +1,6 @@
+@echo off
+echo Installing dependencies...
+call npm install
+echo Compiling and Packaging extension...
+call npx vsce package
+echo Done!

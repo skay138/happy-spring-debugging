@@ -1,0 +1,144 @@
+{
+  "name": "tomcat-debug-setup",
+  "displayName": "Tomcat Debug Setup",
+  "description": "Scaffolds Tomcat debug configurations and scripts for VS Code workspaces.",
+  "publisher": "local-dev",
+  "version": "1.0.0",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "tomcat-debug-setup.setup",
+        "title": "Setup Tomcat Debug Scripts"
+      },
+      {
+        "command": "tomcat-debug-setup.selectTomcatHome",
+        "title": "Select Tomcat Home Directory"
+      }
+    ],
+    "configuration": [
+      {
+        "title": "Server",
+        "properties": {
+          "tomcatDebugSetup.tomcatHome": {
+            "type": "string",
+            "format": "path",
+            "default": "",
+            "order": 1,
+            "markdownDescription": "Tomcat 설치 경로 (예: `C:\\apache-tomcat-8.5.50`). [폴더 선택...](command:tomcat-debug-setup.selectTomcatHome)"
+          },
+          "tomcatDebugSetup.httpPort": {
+            "type": "number",
+            "default": 8080,
+            "order": 2,
+            "markdownDescription": "Tomcat HTTP 커넥터 포트 (`server.xml`의 HTTP Connector port)"
+          },
+          "tomcatDebugSetup.debugPort": {
+            "type": "number",
+            "default": 8000,
+            "order": 3,
+            "markdownDescription": "JPDA 디버그 포트 (VS Code가 attach 할 포트)"
+          },
+          "tomcatDebugSetup.javaOpts": {
+            "type": "string",
+            "default": "-Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8",
+            "order": 4,
+            "markdownDescription": "`JAVA_OPTS` 환경변수. Tomcat 시작 시 JVM에 전달됩니다."
+          },
+          "tomcatDebugSetup.colorizeLogs": {
+            "type": "boolean",
+            "default": true,
+            "order": 5,
+            "markdownDescription": "로그 레벨별 색상으로 출력합니다. (PowerShell 기반)  \n🟣 `FATAL/CRITICAL` → Magenta  \n🔴 `ERROR/SEVERE/심각/Exception` → Red  \n🟡 `WARN/WARNING/경고` → Yellow  \n🟠 `SQL/Hikari/Query` → DarkYellow  \n🟢 `HTTP/Mapping/Dispatching` → Green  \n🔵 `INFO/정보/Started` → Cyan  \n🔹 `DEBUG/debug` → Blue  \n👤 `TRACE/trace` → DarkCyan"
+          }
+        }
+      },
+      {
+        "title": "Context / Deployment",
+        "properties": {
+          "tomcatDebugSetup.contextPath": {
+            "type": "string",
+            "default": "/",
+            "order": 5,
+            "markdownDescription": "웹 애플리케이션 Context Path (예: `/your-project`, `/`)"
+          },
+          "tomcatDebugSetup.docBase": {
+            "type": "string",
+            "format": "path",
+            "default": "${workspaceFolder}/src/main/webapp",
+            "order": 6,
+            "markdownDescription": "Tomcat이 서빙할 **웹앱 루트 디렉토리** (빌드된 war 또는 exploded 폴더)  \n예: `${workspaceFolder}/target/websrc_co`"
+          }
+        }
+      },
+      {
+        "title": "Hot Reload (PreResources)",
+        "properties": {
+          "tomcatDebugSetup.sourceBase": {
+            "type": "string",
+            "format": "path",
+            "default": "${workspaceFolder}/src/main/webapp",
+            "order": 7,
+            "markdownDescription": "**JSP/정적 파일** 핫 리로드용 소스 디렉토리 (`webAppMount=\"/\"`)  \n비워두면 PreResources를 생성하지 않습니다."
+          },
+          "tomcatDebugSetup.classesBase": {
+            "type": "string",
+            "format": "path",
+            "default": "${workspaceFolder}/target/classes",
+            "order": 8,
+            "markdownDescription": "**Java 클래스** 핫 리로드용 컴파일 출력 디렉토리 (`webAppMount=\"/WEB-INF/classes\"`)  \n비워두면 PreResources를 생성하지 않습니다."
+          }
+        }
+      },
+      {
+        "title": "JNDI DataSource",
+        "properties": {
+          "tomcatDebugSetup.jndiResources": {
+            "type": "array",
+            "default": [],
+            "order": 9,
+            "markdownDescription": "Context 내부에 주입할 JNDI `<Resource>` 정의 목록.  \n`settings.json`에서 직접 편집하세요.  \n\n**예시:**\n```json\n\"tomcatDebugSetup.jndiResources\": [\n  {\n    \"name\": \"jdbc/myDB\",\n    \"auth\": \"Container\",\n    \"type\": \"javax.sql.DataSource\",\n    \"factory\": \"org.apache.tomcat.dbcp.dbcp2.BasicDataSourceFactory\",\n    \"driverClassName\": \"oracle.jdbc.OracleDriver\",\n    \"url\": \"jdbc:oracle:thin:@localhost:1521:ORCL\",\n    \"username\": \"user\",\n    \"password\": \"pass\",\n    \"maxActive\": \"100\",\n    \"maxIdle\": \"50\",\n    \"maxWait\": \"-1\"\n  }\n]\n```",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string", "description": "JNDI name (예: jdbc/myDataSource)" },
+                "auth": { "type": "string", "default": "Container" },
+                "type": { "type": "string", "default": "javax.sql.DataSource" },
+                "factory": { "type": "string", "description": "DataSource factory class" },
+                "driverClassName": { "type": "string", "description": "JDBC driver class" },
+                "url": { "type": "string", "description": "JDBC connection URL" },
+                "username": { "type": "string" },
+                "password": { "type": "string" },
+                "maxActive": { "type": ["string", "number"], "default": "100" },
+                "maxIdle": { "type": ["string", "number"], "default": "50" },
+                "maxWait": { "type": ["string", "number"], "default": "-1" }
+              },
+              "additionalProperties": { "type": "string" },
+              "required": ["name"]
+            }
+          }
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "@types/node": "18.x",
+    "typescript": "^5.1.3",
+    "@vscode/vsce": "^2.19.0"
+  }
+}
