@@ -23,8 +23,8 @@ export function activate(context: vscode.ExtensionContext) {
         let tomcatHome = config.get<string>('tomcatHome', '');
         const httpPort = config.get<number>('httpPort', 8080);
         const debugPort = config.get<number>('debugPort', 8000);
-        const contextPath = config.get<string>('contextPath', '/');
-        const docBase = config.get<string>('docBase', '${workspaceFolder}/src/main/webapp');
+        const contextPath = config.get<string>('contextPath', '');
+        const docBase = config.get<string>('docBase', '${workspaceFolder}/target/exploded');
         const javaOpts = config.get<string>('javaOpts', '-Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8');
         const sourceBase = config.get<string>('sourceBase', '${workspaceFolder}/src/main/webapp');
         const classesBase = config.get<string>('classesBase', '${workspaceFolder}/target/classes');
@@ -37,6 +37,23 @@ export function activate(context: vscode.ExtensionContext) {
                 tomcatHome = selectedHome;
             } else {
                 return; // User cancelled
+            }
+        }
+
+        const resolvedDocBase = docBase.replace(/\$\{workspaceFolder\}/g, projectRoot);
+        if (!fs.existsSync(resolvedDocBase)) {
+            const pick = await vscode.window.showInformationMessage(`docBase [${docBase}] does not exist. Would you like to select it?`, 'Yes', 'No');
+            if (pick === 'Yes') {
+                const selectedDocBase = await vscode.commands.executeCommand<string>('tomcat-debug-setup.selectDocBase');
+                if (selectedDocBase) {
+                    // Refresh resolvedDocBase after selection
+                    const refreshedDocBase = selectedDocBase.replace(/\$\{workspaceFolder\}/g, projectRoot);
+                    if (refreshedDocBase !== resolvedDocBase) {
+                        // Re-run setup to use new docBase
+                        vscode.commands.executeCommand('tomcat-debug-setup.setup');
+                        return;
+                    }
+                }
             }
         }
 
@@ -83,15 +100,16 @@ export function activate(context: vscode.ExtensionContext) {
         // --- conf/Catalina/localhost/[contextname].xml ---
         // This approach allows Tomcat to merge with the app's META-INF/context.xml automatically
         const catalinaHostDir = path.join(confDir, 'Catalina', 'localhost');
-        if (!fs.existsSync(catalinaHostDir)) {
-            fs.mkdirSync(catalinaHostDir, { recursive: true });
+        if (fs.existsSync(catalinaHostDir)) {
+            // Clear old context files to avoid duplicates (e.g. if contextPath changed)
+            fs.rmSync(catalinaHostDir, { recursive: true, force: true });
         }
+        fs.mkdirSync(catalinaHostDir, { recursive: true });
 
         // Derive context file name from contextPath
         // /          → ROOT.xml
         // /example   → example.xml
         // /a/b       → a#b.xml  (Tomcat uses # for nested paths)
-        const resolvedDocBase = docBase.replace(/\$\{workspaceFolder\}/g, projectRoot);
         const resolvedSourceBase = sourceBase.replace(/\$\{workspaceFolder\}/g, projectRoot);
         const resolvedClassesBase = classesBase.replace(/\$\{workspaceFolder\}/g, projectRoot);
 
@@ -110,7 +128,7 @@ export function activate(context: vscode.ExtensionContext) {
             if (resolvedClassesBase) {
                 preResList.push(`        <PreResources className="org.apache.catalina.webresources.DirResourceSet"\n                      base="${resolvedClassesBase}"\n                      webAppMount="/WEB-INF/classes" />`);
             }
-            preResourcesXml = `\n    <!-- Source Folder Mapping for Hot Reload -->\n    <Resources cachingAllowed="false" cacheMaxSize="0" trackLockedFiles="true">\n${preResList.join('\n')}\n    </Resources>\n`;
+            preResourcesXml = `\n    <!-- Source Folder Mapping for Hot Reload -->\n    <Resources cachingAllowed="false" trackLockedFiles="true">\n${preResList.join('\n')}\n    </Resources>\n`;
         }
 
         // --- Read META-INF/context.xml from docBase (and fallback to sourceBase) ---
@@ -155,8 +173,7 @@ export function activate(context: vscode.ExtensionContext) {
 <Context docBase="${resolvedDocBase}"
          reloadable="false"
          clearReferencesObjectStreamClassCaches="false"
-         clearReferencesThreadLocals="false"
-         clearReferencesJdbc="false">${preResourcesXml}${metaInfContextBody}${jndiResourcesXml}
+         clearReferencesThreadLocals="false">${preResourcesXml}${metaInfContextBody}${jndiResourcesXml}
 </Context>
 `;
         fs.writeFileSync(contextFilePath, contextFileContent, 'utf8');
@@ -376,6 +393,36 @@ echo Tomcat stopped cleanly.
         return undefined;
     });
     context.subscriptions.push(selectTomcatHomeDisposable);
+
+    // Register Select docBase command
+    let selectDocBaseDisposable = vscode.commands.registerCommand('tomcat-debug-setup.selectDocBase', async () => {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders) return undefined;
+        const projectRoot = workspaceFolders[0].uri.fsPath;
+
+        const selectedFolder = await vscode.window.showOpenDialog({
+            canSelectFiles: false,
+            canSelectFolders: true,
+            canSelectMany: false,
+            openLabel: 'Select Webapp docBase Directory'
+        });
+
+        if (selectedFolder && selectedFolder[0]) {
+            let docBase = selectedFolder[0].fsPath;
+            
+            // If inside workspace, convert to ${workspaceFolder}
+            if (docBase.startsWith(projectRoot)) {
+                docBase = docBase.replace(projectRoot, '${workspaceFolder}').replace(/\\/g, '/');
+            }
+
+            const config = vscode.workspace.getConfiguration('tomcatDebugSetup');
+            await config.update('docBase', docBase, vscode.ConfigurationTarget.Workspace);
+            vscode.window.showInformationMessage(`docBase set to: ${docBase}`);
+            return docBase;
+        }
+        return undefined;
+    });
+    context.subscriptions.push(selectDocBaseDisposable);
 
     // Add configuration change listener
     let configListener = vscode.workspace.onDidChangeConfiguration(e => {

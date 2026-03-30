@@ -21,6 +21,10 @@
       {
         "command": "tomcat-debug-setup.selectTomcatHome",
         "title": "Select Tomcat Home Directory"
+      },
+      {
+        "command": "tomcat-debug-setup.selectDocBase",
+        "title": "Select Tomcat docBase Directory"
       }
     ],
     "configuration": [
@@ -65,16 +69,16 @@
         "properties": {
           "tomcatDebugSetup.contextPath": {
             "type": "string",
-            "default": "/",
+            "default": "",
             "order": 5,
             "markdownDescription": "웹 애플리케이션 Context Path (예: `/your-project`, `/`)"
           },
           "tomcatDebugSetup.docBase": {
             "type": "string",
             "format": "path",
-            "default": "${workspaceFolder}/src/main/webapp",
+            "default": "${workspaceFolder}/target/exploded",
             "order": 6,
-            "markdownDescription": "Tomcat이 서빙할 **웹앱 루트 디렉토리** (빌드된 war 또는 exploded 폴더)  \n예: `${workspaceFolder}/target/websrc_co`"
+            "markdownDescription": "Tomcat이 서빙할 **웹앱 루트 디렉토리** (빌드된 war 또는 exploded 폴더)  \n예: `${workspaceFolder}/target/exploded`. [폴더 선택...](command:tomcat-debug-setup.selectDocBase)"
           }
         }
       },
