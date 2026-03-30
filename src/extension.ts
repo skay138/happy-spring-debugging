@@ -110,7 +110,7 @@ export function activate(context: vscode.ExtensionContext) {
             if (resolvedClassesBase) {
                 preResList.push(`        <PreResources className="org.apache.catalina.webresources.DirResourceSet"\n                      base="${resolvedClassesBase}"\n                      webAppMount="/WEB-INF/classes" />`);
             }
-            preResourcesXml = `\n    <!-- Source Folder Mapping for Hot Reload -->\n    <Resources cachingAllowed="false">\n${preResList.join('\n')}\n    </Resources>\n`;
+            preResourcesXml = `\n    <!-- Source Folder Mapping for Hot Reload -->\n    <Resources cachingAllowed="false" cacheMaxSize="0" trackLockedFiles="true">\n${preResList.join('\n')}\n    </Resources>\n`;
         }
 
         // --- Read META-INF/context.xml from docBase (and fallback to sourceBase) ---
@@ -332,7 +332,8 @@ echo Tomcat stopped cleanly.
             "hostName": "localhost",
             "port": debugPort,
             "preLaunchTask": "Start Tomcat (JPDA)",
-            "postDebugTask": "Stop Tomcat"
+            "postDebugTask": "Stop Tomcat",
+            "internalConsoleOptions": "neverOpen"
         };
         
         if (launchConfigIndex >= 0) {
