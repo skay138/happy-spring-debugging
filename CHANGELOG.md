@@ -3,6 +3,8 @@
 All notable changes to the "Happy Spring Tomcat" extension will be documented in this file.
 
 ## [1.0.3] - 2026-03-31
+- **🧠 Smart docBase Detection**: Automatically finds the webapp's build output directory (e.g., `target/my-app`) by searching for `WEB-INF/lib`, minimizing manual configuration.
+- **📂 Enhanced Picker UX**: Improved `Select docBase` command with a QuickPick for one-click selection of detected candidates.
 - **🚀 Status Bar Menu**: Added a rocket icon in the status bar for quick access to Start/Stop/Logs/Settings commands.
 - **🌐 Auto-Open Browser**: New setting `happySpringTomcat.autoOpenBrowser` to automatically launch the browser after server startup.
 - **⚙️ New Commands & UX**: Added `Open Settings`, `Clear Cache`, and `View Latest Logs` commands. Improved path selection with native folder pickers.

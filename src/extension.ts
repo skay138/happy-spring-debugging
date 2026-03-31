@@ -41,19 +41,33 @@ export function activate(context: vscode.ExtensionContext) {
             }
         }
 
-        const resolvedDocBase = docBase.replace(/\$\{workspaceFolder\}/g, projectRoot);
+        let resolvedDocBase = docBase.replace(/\$\{workspaceFolder\}/g, projectRoot);
         if (!fs.existsSync(resolvedDocBase)) {
-            const pick = await vscode.window.showInformationMessage(`docBase [${docBase}] does not exist. Would you like to select it?`, 'Yes', 'No');
-            if (pick === 'Yes') {
-                const selectedDocBase = await vscode.commands.executeCommand<string>('happy-spring-tomcat.selectDocBase');
-                if (selectedDocBase) {
-                    // Refresh resolvedDocBase after selection
-                    const refreshedDocBase = selectedDocBase.replace(/\$\{workspaceFolder\}/g, projectRoot);
-                    if (refreshedDocBase !== resolvedDocBase) {
-                        // Re-run setup to use new docBase
+            // Try Smart Auto-Detection
+            const candidates = findDocBaseCandidates(projectRoot);
+            
+            if (candidates.length === 1) {
+                // Exactly one candidate: use it automatically
+                const autoDocBase = candidates[0].replace(projectRoot, '${workspaceFolder}').replace(/\\/g, '/');
+                await vscode.workspace.getConfiguration('happySpringTomcat').update('docBase', autoDocBase, vscode.ConfigurationTarget.Workspace);
+                vscode.window.showInformationMessage(`docBase automatically detected: ${autoDocBase}`);
+                resolvedDocBase = candidates[0]; // Update for current execution
+            } else {
+                // Zero or Multiple: ask the user
+                const prompt = (candidates.length > 1) 
+                    ? `Multiple docBase candidates found. Please select one.`
+                    : `docBase [${docBase}] does not exist. Please select yours.`;
+
+                const pick = await vscode.window.showInformationMessage(prompt, 'Select docBase', 'Cancel');
+                if (pick === 'Select docBase') {
+                    const selectedDocBase = await vscode.commands.executeCommand<string>('happy-spring-tomcat.selectDocBase');
+                    if (selectedDocBase) {
+                        // Re-run setup to apply new docBase
                         vscode.commands.executeCommand('happy-spring-tomcat.setup');
                         return;
                     }
+                } else {
+                    return; // User cancelled
                 }
             }
         }
@@ -409,25 +423,63 @@ echo Tomcat stopped cleanly.
         if (!workspaceFolders) return undefined;
         const projectRoot = workspaceFolders[0].uri.fsPath;
 
-        const selectedFolder = await vscode.window.showOpenDialog({
-            canSelectFiles: false,
-            canSelectFolders: true,
-            canSelectMany: false,
-            openLabel: 'Select Webapp docBase Directory'
-        });
+        // Smart Detection
+        const candidates = findDocBaseCandidates(projectRoot);
+        let selectedDocBase: string | undefined;
 
-        if (selectedFolder && selectedFolder[0]) {
-            let docBase = selectedFolder[0].fsPath;
-            
+        if (candidates.length > 0) {
+            const items = [
+                ...candidates.map(c => ({
+                    label: `$(folder) ${c.replace(projectRoot, '').replace(/^[\\\/]/, '')}`,
+                    description: 'Detected webapp directory',
+                    fsPath: c
+                })),
+                { label: '$(folder-opened) Select manually...', description: 'Browse for a different folder', fsPath: 'MANUAL' }
+            ];
+
+            const selection = await vscode.window.showQuickPick(items, {
+                placeHolder: 'Select Webapp docBase Directory'
+            });
+
+            if (selection) {
+                if (selection.fsPath === 'MANUAL') {
+                    const picked = await vscode.window.showOpenDialog({
+                        canSelectFiles: false,
+                        canSelectFolders: true,
+                        canSelectMany: false,
+                        openLabel: 'Select Webapp docBase Directory'
+                    });
+                    if (picked && picked[0]) {
+                        selectedDocBase = picked[0].fsPath;
+                    }
+                } else {
+                    selectedDocBase = selection.fsPath;
+                }
+            }
+        } else {
+            // No candidates, fallback to folder picker
+            const picked = await vscode.window.showOpenDialog({
+                canSelectFiles: false,
+                canSelectFolders: true,
+                canSelectMany: false,
+                openLabel: 'Select Webapp docBase Directory'
+            });
+            if (picked && picked[0]) {
+                selectedDocBase = picked[0].fsPath;
+            }
+        }
+
+        if (selectedDocBase) {
+            let docBaseConfig = selectedDocBase;
             // If inside workspace, convert to ${workspaceFolder}
-            if (docBase.startsWith(projectRoot)) {
-                docBase = docBase.replace(projectRoot, '${workspaceFolder}').replace(/\\/g, '/');
+            if (docBaseConfig.startsWith(projectRoot)) {
+                docBaseConfig = docBaseConfig.replace(projectRoot, '${workspaceFolder}').replace(/\\/g, '/');
             }
 
             const config = vscode.workspace.getConfiguration('happySpringTomcat');
-            await config.update('docBase', docBase, vscode.ConfigurationTarget.Workspace);
-            vscode.window.showInformationMessage(`docBase set to: ${docBase}`);
-            return docBase;
+            await config.update('docBase', docBaseConfig, vscode.ConfigurationTarget.Workspace);
+            vscode.window.showInformationMessage(`docBase set to: ${docBaseConfig}`);
+            return docBaseConfig;
         }
         return undefined;
     });
@@ -622,4 +674,50 @@ function validateTomcatHome(tomcatHome: string): { valid: boolean, reason?: stri
     }
 
     return { valid: true };
+}
+
+/**
+ * Searches for potential docBase directories in the workspace (containing WEB-INF/lib).
+ */
+function findDocBaseCandidates(projectRoot: string): string[] {
+    const candidates: string[] = [];
+    // Start searching in build artifact directories
+    const searchDirs = ['target', 'build', 'out', 'bin'];
+    
+    for (const dirName of searchDirs) {
+        const searchPath = path.join(projectRoot, dirName);
+        if (fs.existsSync(searchPath) && fs.statSync(searchPath).isDirectory()) {
+            findWebInfLibRecursive(searchPath, candidates);
+        }
+    }
+    return candidates;
+}
+
+function findWebInfLibRecursive(currentDir: string, candidates: string[]) {
+    try {
+        const items = fs.readdirSync(currentDir);
+        
+        // Check if current directory has a WEB-INF folder
+        const webInfPath = path.join(currentDir, 'WEB-INF');
+        if (fs.existsSync(webInfPath) && fs.statSync(webInfPath).isDirectory()) {
+            // If it has lib or matches certain names, it's a strong candidate
+            const libPath = path.join(webInfPath, 'lib');
+            if (fs.existsSync(libPath)) {
+                candidates.push(currentDir);
+                return; // Stop in this branch
+            }
+        }
+
+        // Otherwise recurse into subdirectories
+        for (const item of items) {
+            if (['node_modules', '.git', '.vscode', 'test-classes', 'classes'].includes(item)) continue;
+            
+            const itemPath = path.join(currentDir, item);
+            if (fs.statSync(itemPath).isDirectory()) {
+                findWebInfLibRecursive(itemPath, candidates);
+            }
+        }
+    } catch (e) {
+        // Ignore read errors
+    }
 }
