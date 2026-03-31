@@ -1,9 +1,9 @@
 {
-  "name": "happy-spring-debugging",
-  "displayName": "Happy Spring Debugging",
+  "name": "happy-spring-tomcat",
+  "displayName": "Happy Spring Tomcat",
   "description": "Happy debugging for Spring projects (legacy) on Tomcat.",
-  "publisher": "techpark39",
-  "version": "1.0.0",
+  "publisher": "skay138",
+  "version": "1.0.1",
   "icon": "icon.png",
   "engines": {
     "vscode": "^1.80.0"
@@ -34,48 +34,48 @@
   "contributes": {
     "commands": [
       {
-        "command": "happy-spring-debugging.setup",
-        "title": "Happy Spring: Setup Debug Scripts"
+        "command": "happy-spring-tomcat.setup",
+        "title": "Happy Spring Tomcat: Setup Debug Scripts"
       },
       {
-        "command": "happy-spring-debugging.selectTomcatHome",
-        "title": "Happy Spring: Select Tomcat Home"
+        "command": "happy-spring-tomcat.selectTomcatHome",
+        "title": "Happy Spring Tomcat: Select Tomcat Home"
       },
       {
-        "command": "happy-spring-debugging.selectDocBase",
-        "title": "Happy Spring: Select docBase"
+        "command": "happy-spring-tomcat.selectDocBase",
+        "title": "Happy Spring Tomcat: Select docBase"
       }
     ],
     "configuration": [
       {
-        "title": "Happy Spring Debugging - Server",
+        "title": "Happy Spring Tomcat - Server",
         "properties": {
-          "happySpringDebugging.tomcatHome": {
+          "happySpringTomcat.tomcatHome": {
             "type": "string",
             "format": "path",
             "default": "",
             "order": 1,
-            "markdownDescription": "Tomcat 설치 경로 (예: `C:\\apache-tomcat-8.5.50`). [폴더 선택...](command:happy-spring-debugging.selectTomcatHome)"
+            "markdownDescription": "Tomcat 설치 경로 (예: `C:\\apache-tomcat-8.5.50`). [폴더 선택...](command:happy-spring-tomcat.selectTomcatHome)"
           },
-          "happySpringDebugging.httpPort": {
+          "happySpringTomcat.httpPort": {
             "type": "number",
             "default": 8080,
             "order": 2,
             "markdownDescription": "Tomcat HTTP 커넥터 포트 (`server.xml`의 HTTP Connector port)"
           },
-          "happySpringDebugging.debugPort": {
+          "happySpringTomcat.debugPort": {
             "type": "number",
             "default": 8000,
             "order": 3,
             "markdownDescription": "JPDA 디버그 포트 (VS Code가 attach 할 포트)"
           },
-          "happySpringDebugging.javaOpts": {
+          "happySpringTomcat.javaOpts": {
             "type": "string",
             "default": "-Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8",
             "order": 4,
             "markdownDescription": "`JAVA_OPTS` 환경변수. Tomcat 시작 시 JVM에 전달됩니다."
           },
-          "happySpringDebugging.colorizeLogs": {
+          "happySpringTomcat.colorizeLogs": {
             "type": "boolean",
             "default": true,
             "order": 5,
@@ -84,34 +84,34 @@
         }
       },
       {
-        "title": "Happy Spring Debugging - Context / Deployment",
+        "title": "Happy Spring Tomcat - Context / Deployment",
         "properties": {
-          "happySpringDebugging.contextPath": {
+          "happySpringTomcat.contextPath": {
             "type": "string",
             "default": "",
             "order": 5,
             "markdownDescription": "웹 애플리케이션 Context Path (예: `/your-project`, `/`)"
           },
-          "happySpringDebugging.docBase": {
+          "happySpringTomcat.docBase": {
             "type": "string",
             "format": "path",
             "default": "${workspaceFolder}/target/exploded",
             "order": 6,
-            "markdownDescription": "Tomcat이 서빙할 **웹앱 루트 디렉토리** (빌드된 war 또는 exploded 폴더)  \n예: `${workspaceFolder}/target/exploded`. [폴더 선택...](command:happy-spring-debugging.selectDocBase)"
+            "markdownDescription": "Tomcat이 서빙할 **웹앱 루트 디렉토리** (빌드된 war 또는 exploded 폴더)  \n예: `${workspaceFolder}/target/exploded`. [폴더 선택...](command:happy-spring-tomcat.selectDocBase)"
           }
         }
       },
       {
-        "title": "Happy Spring Debugging - Hot Reload",
+        "title": "Happy Spring Tomcat - Hot Reload",
         "properties": {
-          "happySpringDebugging.sourceBase": {
+          "happySpringTomcat.sourceBase": {
             "type": "string",
             "format": "path",
             "default": "${workspaceFolder}/src/main/webapp",
             "order": 7,
             "markdownDescription": "**JSP/정적 파일** 핫 리로드용 소스 디렉토리 (`webAppMount=\"/\"`)  \n비워두면 PreResources를 생성하지 않습니다."
           },
-          "happySpringDebugging.classesBase": {
+          "happySpringTomcat.classesBase": {
             "type": "string",
             "format": "path",
             "default": "${workspaceFolder}/target/classes",
@@ -121,13 +121,13 @@
         }
       },
       {
-        "title": "Happy Spring Debugging - JNDI",
+        "title": "Happy Spring Tomcat - JNDI",
         "properties": {
-          "happySpringDebugging.jndiResources": {
+          "happySpringTomcat.jndiResources": {
             "type": "array",
             "default": [],
             "order": 9,
-            "markdownDescription": "Context 내부에 주입할 JNDI `<Resource>` 정의 목록.  \n`settings.json`에서 직접 편집하세요.  \n\n**예시:**\n```json\n\"happySpringDebugging.jndiResources\": [\n  {\n    \"name\": \"jdbc/myDB\",\n    \"auth\": \"Container\",\n    \"type\": \"javax.sql.DataSource\",\n    \"factory\": \"org.apache.tomcat.dbcp.dbcp2.BasicDataSourceFactory\",\n    \"driverClassName\": \"oracle.jdbc.OracleDriver\",\n    \"url\": \"jdbc:oracle:thin:@localhost:1521:ORCL\",\n    \"username\": \"user\",\n    \"password\": \"pass\",\n    \"maxActive\": \"100\",\n    \"maxIdle\": \"50\",\n    \"maxWait\": \"-1\"\n  }\n]\n```",
+            "markdownDescription": "Context 내부에 주입할 JNDI `<Resource>` 정의 목록.  \n`settings.json`에서 직접 편집하세요.  \n\n**예시:**\n```json\n\"happySpringTomcat.jndiResources\": [\n  {\n    \"name\": \"jdbc/myDB\",\n    \"auth\": \"Container\",\n    \"type\": \"javax.sql.DataSource\",\n    \"factory\": \"org.apache.tomcat.dbcp.dbcp2.BasicDataSourceFactory\",\n    \"driverClassName\": \"oracle.jdbc.OracleDriver\",\n    \"url\": \"jdbc:oracle:thin:@localhost:1521:ORCL\",\n    \"username\": \"user\",\n    \"password\": \"pass\",\n    \"maxActive\": \"100\",\n    \"maxIdle\": \"50\",\n    \"maxWait\": \"-1\"\n  }\n]\n```",
             "items": {
               "type": "object",
               "properties": {

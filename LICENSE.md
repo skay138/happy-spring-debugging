@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 techpark39(skay138)
+Copyright (c) 2026 skay138(techpark39)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
