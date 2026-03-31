@@ -3,7 +3,7 @@
   "displayName": "Happy Spring Tomcat",
   "description": "Happy debugging for Spring projects (legacy) on Tomcat.",
   "publisher": "skay138",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "icon": "icon.ico",
   "engines": {
     "vscode": "^1.80.0"
@@ -29,7 +29,9 @@
     "debug",
     "scaffold"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
@@ -44,6 +46,18 @@
       {
         "command": "happy-spring-tomcat.selectDocBase",
         "title": "Happy Spring Tomcat: Select docBase"
+      },
+      {
+        "command": "happy-spring-tomcat.openSettings",
+        "title": "Happy Spring Tomcat: Open Settings"
+      },
+      {
+        "command": "happy-spring-tomcat.clearCache",
+        "title": "Happy Spring Tomcat: Clear Cache (Work/Temp)"
+      },
+      {
+        "command": "happy-spring-tomcat.viewLogs",
+        "title": "Happy Spring Tomcat: View Latest Logs"
       }
     ],
     "configuration": [
@@ -80,6 +94,18 @@
             "default": true,
             "order": 5,
             "markdownDescription": "로그 레벨별 색상으로 출력합니다. (PowerShell 기반)  \n🟣 `FATAL/CRITICAL` → Magenta  \n🔴 `ERROR/SEVERE/심각/Exception` → Red  \n🟡 `WARN/WARNING/경고` → Yellow  \n🟠 `SQL/Hikari/Query` → DarkYellow  \n🟢 `HTTP/Mapping/Dispatching` → Green  \n🔵 `INFO/정보/Started` → Cyan  \n🔹 `DEBUG/debug` → Blue  \n👤 `TRACE/trace` → DarkCyan"
+          },
+          "happySpringTomcat.autoOpenBrowser": {
+            "type": "boolean",
+            "default": true,
+            "order": 6,
+            "markdownDescription": "톰캣이 성공적으로 시작되면 자동으로 브라우저를 엽니다."
+          },
+          "happySpringTomcat.showStatusBarIcon": {
+            "type": "boolean",
+            "default": true,
+            "order": 7,
+            "markdownDescription": "상태 표시줄에 🚀 톰캣 단축 메뉴 아이콘을 표시합니다."
           }
         }
       },
@@ -89,14 +115,14 @@
           "happySpringTomcat.contextPath": {
             "type": "string",
             "default": "",
-            "order": 5,
+            "order": 10,
             "markdownDescription": "웹 애플리케이션 Context Path (예: `/your-project`, `/`)"
           },
           "happySpringTomcat.docBase": {
             "type": "string",
             "format": "path",
             "default": "${workspaceFolder}/target/exploded",
-            "order": 6,
+            "order": 11,
             "markdownDescription": "Tomcat이 서빙할 **웹앱 루트 디렉토리** (빌드된 war 또는 exploded 폴더)  \n예: `${workspaceFolder}/target/exploded`. [폴더 선택...](command:happy-spring-tomcat.selectDocBase)"
           }
         }
@@ -108,14 +134,14 @@
             "type": "string",
             "format": "path",
             "default": "${workspaceFolder}/src/main/webapp",
-            "order": 7,
+            "order": 20,
             "markdownDescription": "**JSP/정적 파일** 핫 리로드용 소스 디렉토리 (`webAppMount=\"/\"`)  \n비워두면 PreResources를 생성하지 않습니다."
           },
           "happySpringTomcat.classesBase": {
             "type": "string",
             "format": "path",
             "default": "${workspaceFolder}/target/classes",
-            "order": 8,
+            "order": 21,
             "markdownDescription": "**Java 클래스** 핫 리로드용 컴파일 출력 디렉토리 (`webAppMount=\"/WEB-INF/classes\"`)  \n비워두면 PreResources를 생성하지 않습니다."
           }
         }
@@ -126,7 +152,7 @@
           "happySpringTomcat.jndiResources": {
             "type": "array",
             "default": [],
-            "order": 9,
+            "order": 30,
             "markdownDescription": "Context 내부에 주입할 JNDI `<Resource>` 정의 목록.  \n`settings.json`에서 직접 편집하세요.  \n\n**예시:**\n```json\n\"happySpringTomcat.jndiResources\": [\n  {\n    \"name\": \"jdbc/myDB\",\n    \"auth\": \"Container\",\n    \"type\": \"javax.sql.DataSource\",\n    \"factory\": \"org.apache.tomcat.dbcp.dbcp2.BasicDataSourceFactory\",\n    \"driverClassName\": \"oracle.jdbc.OracleDriver\",\n    \"url\": \"jdbc:oracle:thin:@localhost:1521:ORCL\",\n    \"username\": \"user\",\n    \"password\": \"pass\",\n    \"maxActive\": \"100\",\n    \"maxIdle\": \"50\",\n    \"maxWait\": \"-1\"\n  }\n]\n```",
             "items": {
               "type": "object",

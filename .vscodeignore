@@ -1,16 +1,12 @@
 .vscode/**
 .git/**
 .gitignore
-LICENSE
-README.md
-CHANGELOG.md
 tsconfig.json
 src/**
 node_modules/** (vsce handles node_modules independently)
+happy-spring-tomcat-*.vsix
 out/test/**
 test/**
-happy-spring-tomcat-1.0.0.vsix
-tomcat-debug-setup-1.0.0.vsix
 build.bat
 package-lock.json
 **/.*

@@ -30,6 +30,7 @@ export function activate(context: vscode.ExtensionContext) {
         const classesBase = config.get<string>('classesBase', '${workspaceFolder}/target/classes');
         const jndiResources = config.get<any[]>('jndiResources', []);
         const colorizeLogs = config.get<boolean>('colorizeLogs', true);
+        const autoOpenBrowser = config.get<boolean>('autoOpenBrowser', true);
 
         if (!tomcatHome) {
             const selectedHome = await vscode.commands.executeCommand<string>('happy-spring-tomcat.selectTomcatHome');
@@ -352,6 +353,14 @@ echo Tomcat stopped cleanly.
             "postDebugTask": "Stop Tomcat",
             "internalConsoleOptions": "neverOpen"
         };
+
+        if (autoOpenBrowser) {
+            (launchConfigDef as any)["serverReadyAction"] = {
+                "action": "openExternally",
+                "pattern": "Server startup in",
+                "uriFormat": `http://localhost:${httpPort}${contextPath.startsWith('/') ? contextPath : '/' + contextPath}`
+            };
+        }
         
         if (launchConfigIndex >= 0) {
             launchJson.configurations[launchConfigIndex] = launchConfigDef;
@@ -427,15 +436,152 @@ echo Tomcat stopped cleanly.
     // Add configuration change listener
     let configListener = vscode.workspace.onDidChangeConfiguration(e => {
         if (e.affectsConfiguration('happySpringTomcat')) {
-            vscode.window.showInformationMessage('Tomcat settings changed. Would you like to regenerate the debug scripts?', 'Yes', 'No')
-                .then(selection => {
-                    if (selection === 'Yes') {
-                        vscode.commands.executeCommand('happy-spring-tomcat.setup');
-                    }
-                });
+            // Re-check status bar visibility
+            if (e.affectsConfiguration('happySpringTomcat.showStatusBarIcon')) {
+                const updatedConfig = vscode.workspace.getConfiguration('happySpringTomcat');
+                if (updatedConfig.get<boolean>('showStatusBarIcon', true)) {
+                    statusBarItem.show();
+                } else {
+                    statusBarItem.hide();
+                }
+            }
+
+            // Regular settings change prompt (optional, only if it affects the generated scripts)
+            if (e.affectsConfiguration('happySpringTomcat.tomcatHome') || 
+                e.affectsConfiguration('happySpringTomcat.httpPort') ||
+                e.affectsConfiguration('happySpringTomcat.debugPort') ||
+                e.affectsConfiguration('happySpringTomcat.contextPath') ||
+                e.affectsConfiguration('happySpringTomcat.docBase')) {
+                
+                vscode.window.showInformationMessage('Tomcat settings changed. Would you like to regenerate the debug scripts?', 'Yes', 'No')
+                    .then(selection => {
+                        if (selection === 'Yes') {
+                            vscode.commands.executeCommand('happy-spring-tomcat.setup');
+                        }
+                    });
+            }
         }
     });
     context.subscriptions.push(configListener);
+
+    // Register Open Settings command
+    let openSettingsDisposable = vscode.commands.registerCommand('happy-spring-tomcat.openSettings', () => {
+        vscode.commands.executeCommand('workbench.action.openWorkspaceSettings', 'happySpringTomcat');
+    });
+    context.subscriptions.push(openSettingsDisposable);
+
+    // Create Status Bar Item
+    const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+    statusBarItem.text = `$(rocket) Tomcat`;
+    statusBarItem.tooltip = 'Happy Spring Tomcat Menu';
+    statusBarItem.command = 'happy-spring-tomcat.showMenu';
+    
+    const initialConfig = vscode.workspace.getConfiguration('happySpringTomcat');
+    if (initialConfig.get<boolean>('showStatusBarIcon', true)) {
+        statusBarItem.show();
+    }
+    
+    context.subscriptions.push(statusBarItem);
+
+    // Register Status Bar Menu Command
+    let showMenuDisposable = vscode.commands.registerCommand('happy-spring-tomcat.showMenu', async () => {
+        const items = [
+            { label: '$(play) Start Tomcat (Attach Debug)', description: 'Launch and attach debugger', action: 'workbench.action.debug.start' },
+            { label: '$(primitive-square) Stop Tomcat', description: 'Kill Tomcat processes', action: 'workbench.action.tasks.runTask', args: 'Stop Tomcat' },
+            { label: '$(trash) Clear Tomcat Cache', description: 'Delete work/temp directory contents', action: 'happy-spring-tomcat.clearCache' },
+            { label: '$(list-unordered) View Latest Logs', description: 'Open the most recent log file', action: 'happy-spring-tomcat.viewLogs' },
+            { label: '$(gear) Setup Debug Scripts', description: 'Regenerate .vscode configs', action: 'happy-spring-tomcat.setup' },
+            { label: '$(settings-gear) Open Settings', description: 'Configure Happy Spring Tomcat', action: 'happy-spring-tomcat.openSettings' }
+        ];
+
+        const selected = await vscode.window.showQuickPick(items, {
+            placeHolder: 'Happy Spring Tomcat Menu'
+        });
+
+        if (selected) {
+            if (selected.action === 'workbench.action.tasks.runTask') {
+                const tasks = await vscode.tasks.fetchTasks();
+                const task = tasks.find(t => t.name === selected.args);
+                if (task) {
+                    vscode.tasks.executeTask(task);
+                }
+            } else if (selected.action === 'workbench.action.debug.start') {
+                // Find our specific launch config
+                const workspaceFolders = vscode.workspace.workspaceFolders;
+                if (workspaceFolders) {
+                    vscode.debug.startDebugging(workspaceFolders[0], "🚀 Tomcat — Attach Debug");
+                }
+            } else {
+                vscode.commands.executeCommand(selected.action);
+            }
+        }
+    });
+    context.subscriptions.push(showMenuDisposable);
+
+    // Register Clear Cache command
+    let clearCacheDisposable = vscode.commands.registerCommand('happy-spring-tomcat.clearCache', async () => {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders) return;
+        
+        const projectRoot = workspaceFolders[0].uri.fsPath;
+        const tomcatBaseDir = path.join(projectRoot, '.vscode', 'happy-spring-tomcat', 'tomcat-base');
+        
+        if (!fs.existsSync(tomcatBaseDir)) {
+            vscode.window.showWarningMessage('Tomcat base directory not found. Please run Setup first.');
+            return;
+        }
+
+        const foldersToClear = ['work', 'temp'];
+        let clearedPaths: string[] = [];
+
+        try {
+            foldersToClear.forEach(folder => {
+                const folderPath = path.join(tomcatBaseDir, folder);
+                if (fs.existsSync(folderPath)) {
+                    const files = fs.readdirSync(folderPath);
+                    files.forEach(file => {
+                        const filePath = path.join(folderPath, file);
+                        fs.rmSync(filePath, { recursive: true, force: true });
+                    });
+                    clearedPaths.push(folder);
+                }
+            });
+            vscode.window.showInformationMessage(`Successfully cleared Tomcat cache: ${clearedPaths.join(', ')}`);
+        } catch (err: any) {
+            vscode.window.showErrorMessage(`Failed to clear cache: ${err.message}. (Is Tomcat still running?)`);
+        }
+    });
+    context.subscriptions.push(clearCacheDisposable);
+
+    // Register View Logs command
+    let viewLogsDisposable = vscode.commands.registerCommand('happy-spring-tomcat.viewLogs', async () => {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders) return;
+        
+        const projectRoot = workspaceFolders[0].uri.fsPath;
+        const logsDir = path.join(projectRoot, '.vscode', 'happy-spring-tomcat', 'tomcat-base', 'logs');
+        
+        if (!fs.existsSync(logsDir)) {
+            vscode.window.showWarningMessage('Tomcat logs directory not found. Please start Tomcat first.');
+            return;
+        }
+
+        const files = fs.readdirSync(logsDir);
+        if (files.length === 0) {
+            vscode.window.showInformationMessage('No log files found in the logs directory.');
+            return;
+        }
+
+        // Sort files by modified time descending
+        const latestFile = files
+            .map(file => ({ file, mtime: fs.statSync(path.join(logsDir, file)).mtime }))
+            .sort((a, b) => b.mtime.getTime() - a.mtime.getTime())[0].file;
+
+        const logPath = path.join(logsDir, latestFile);
+        const document = await vscode.workspace.openTextDocument(logPath);
+        await vscode.window.showTextDocument(document, { preview: false });
+    });
+    context.subscriptions.push(viewLogsDisposable);
 }
 
 export function deactivate() {}
