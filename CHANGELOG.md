@@ -2,6 +2,9 @@
 
 All notable changes to the "Happy Spring Tomcat" extension will be documented in this file.
 
+## [1.0.4] - 2026-04-02
+- **📁 Clean Search**: Moved logs and runtime files to external storage to prevent them from appearing in global search and keep the workspace tidy.
+
 ## [1.0.3] - 2026-03-31
 - **🧠 Smart docBase Detection**: Automatically finds the webapp's build output directory (e.g., `target/my-app`) by searching for `WEB-INF/lib`, minimizing manual configuration.
 - **📂 Enhanced Picker UX**: Improved `Select docBase` command with a QuickPick for one-click selection of detected candidates.

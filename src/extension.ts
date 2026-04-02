@@ -41,6 +41,12 @@ export function activate(context: vscode.ExtensionContext) {
             }
         }
 
+        const tomcatBaseDir = getTomcatBaseDir(context);
+        if (!tomcatBaseDir) {
+            vscode.window.showErrorMessage('Extension storage is not available. Please open a workspace folder.');
+            return;
+        }
+
         let resolvedDocBase = docBase.replace(/\$\{workspaceFolder\}/g, projectRoot);
         if (!fs.existsSync(resolvedDocBase)) {
             // Try Smart Auto-Detection
@@ -84,7 +90,7 @@ export function activate(context: vscode.ExtensionContext) {
             fs.mkdirSync(extensionDir, { recursive: true });
         }
 
-        const tomcatBaseDir = path.join(extensionDir, 'tomcat-base');
+        // --- Setup runtime directory in Extension Storage ---
         const confDir = path.join(tomcatBaseDir, 'conf');
         const sourceConfDir = path.join(tomcatHome, 'conf');
 
@@ -249,7 +255,7 @@ timeout /t 1 /nobreak > nul
 
 set "JAVA_OPTS=${javaOpts}"
 set "CATALINA_HOME=${tomcatHome}"
-set "CATALINA_BASE=%~dp0tomcat-base"
+set "CATALINA_BASE=${tomcatBaseDir}"
 set "JPDA_ADDRESS=127.0.0.1:${debugPort}"
 
 echo Tomcat is launching (HTTP Port ${httpPort})...
@@ -385,7 +391,7 @@ echo Tomcat stopped cleanly.
         fs.writeFileSync(launchJsonPath, JSON.stringify(launchJson, null, 4), 'utf8');
 
         // Inform user
-        vscode.window.showInformationMessage('Tomcat Debug Scripts have been successfully configured in .vscode!');
+        vscode.window.showInformationMessage('Tomcat Debug Setup has been successfully applied!');
     });
 
     context.subscriptions.push(disposable);
@@ -505,7 +511,7 @@ echo Tomcat stopped cleanly.
                 e.affectsConfiguration('happySpringTomcat.contextPath') ||
                 e.affectsConfiguration('happySpringTomcat.docBase')) {
                 
-                vscode.window.showInformationMessage('Tomcat settings changed. Would you like to regenerate the debug scripts?', 'Yes', 'No')
+                vscode.window.showInformationMessage('Tomcat settings changed. Would you like to re-apply the debug setup?', 'Yes', 'No')
                     .then(selection => {
                         if (selection === 'Yes') {
                             vscode.commands.executeCommand('happy-spring-tomcat.setup');
@@ -542,7 +548,7 @@ echo Tomcat stopped cleanly.
             { label: '$(primitive-square) Stop Tomcat', description: 'Kill Tomcat processes', action: 'workbench.action.tasks.runTask', args: 'Stop Tomcat' },
             { label: '$(trash) Clear Tomcat Cache', description: 'Delete work/temp directory contents', action: 'happy-spring-tomcat.clearCache' },
             { label: '$(list-unordered) View Latest Logs', description: 'Open the most recent log file', action: 'happy-spring-tomcat.viewLogs' },
-            { label: '$(gear) Setup Debug Scripts', description: 'Regenerate .vscode configs', action: 'happy-spring-tomcat.setup' },
+            { label: '$(check-all) Apply Debug Setup', description: 'Regenerate .vscode configs', action: 'happy-spring-tomcat.setup' },
             { label: '$(settings-gear) Open Settings', description: 'Configure Happy Spring Tomcat', action: 'happy-spring-tomcat.openSettings' }
         ];
 
@@ -575,10 +581,9 @@ echo Tomcat stopped cleanly.
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders) return;
         
-        const projectRoot = workspaceFolders[0].uri.fsPath;
-        const tomcatBaseDir = path.join(projectRoot, '.vscode', 'happy-spring-tomcat', 'tomcat-base');
+        const tomcatBaseDir = getTomcatBaseDir(context);
         
-        if (!fs.existsSync(tomcatBaseDir)) {
+        if (!tomcatBaseDir || !fs.existsSync(tomcatBaseDir)) {
             vscode.window.showWarningMessage('Tomcat base directory not found. Please run Setup first.');
             return;
         }
@@ -610,10 +615,10 @@ echo Tomcat stopped cleanly.
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders) return;
         
-        const projectRoot = workspaceFolders[0].uri.fsPath;
-        const logsDir = path.join(projectRoot, '.vscode', 'happy-spring-tomcat', 'tomcat-base', 'logs');
+        const tomcatBaseDir = getTomcatBaseDir(context);
+        const logsDir = tomcatBaseDir ? path.join(tomcatBaseDir, 'logs') : '';
         
-        if (!fs.existsSync(logsDir)) {
+        if (!logsDir || !fs.existsSync(logsDir)) {
             vscode.window.showWarningMessage('Tomcat logs directory not found. Please start Tomcat first.');
             return;
         }
@@ -720,4 +725,15 @@ function findWebInfLibRecursive(currentDir: string, candidates: string[]) {
     } catch (e) {
         // Ignore read errors
     }
+}
+
+/**
+ * Gets the workspace-specific storage directory for Tomcat runtime.
+ */
+function getTomcatBaseDir(context: vscode.ExtensionContext): string | undefined {
+    if (context.storageUri) {
+        const storagePath = context.storageUri.fsPath;
+        return path.join(storagePath, 'tomcat-base');
+    }
+    return undefined;
 }

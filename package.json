@@ -3,7 +3,7 @@
   "displayName": "Happy Spring Tomcat",
   "description": "Happy debugging for Spring projects (legacy) on Tomcat.",
   "publisher": "skay138",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "icon": "icon.ico",
   "engines": {
     "vscode": "^1.80.0"
@@ -37,7 +37,7 @@
     "commands": [
       {
         "command": "happy-spring-tomcat.setup",
-        "title": "Happy Spring Tomcat: Setup Debug Scripts"
+        "title": "Happy Spring Tomcat: Apply Debug Setup"
       },
       {
         "command": "happy-spring-tomcat.selectTomcatHome",
