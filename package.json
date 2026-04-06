@@ -40,32 +40,12 @@
         "title": "Happy Spring Tomcat: Apply Debug Setup"
       },
       {
-        "command": "happy-spring-tomcat.selectTomcatHome",
-        "title": "Happy Spring Tomcat: Select Tomcat Home"
-      },
-      {
-        "command": "happy-spring-tomcat.selectDocBase",
-        "title": "Happy Spring Tomcat: Select docBase"
-      },
-      {
-        "command": "happy-spring-tomcat.openSettings",
-        "title": "Happy Spring Tomcat: Open Settings"
-      },
-      {
-        "command": "happy-spring-tomcat.clearCache",
-        "title": "Happy Spring Tomcat: Clear Cache (Work/Temp)"
-      },
-      {
-        "command": "happy-spring-tomcat.viewLogs",
-        "title": "Happy Spring Tomcat: View Latest Logs"
+        "command": "happy-spring-tomcat.restart",
+        "title": "Happy Spring Tomcat: Restart Tomcat"
       },
       {
         "command": "happy-spring-tomcat.showMenu",
         "title": "Happy Spring Tomcat: Show Menu"
-      },
-      {
-        "command": "happy-spring-tomcat.restart",
-        "title": "Happy Spring Tomcat: Restart Tomcat"
       }
     ],
     "configuration": [
