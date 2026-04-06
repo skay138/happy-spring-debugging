@@ -2,7 +2,11 @@
 
 All notable changes to "Happy Spring Tomcat" will be documented in this file.
 
+## [1.0.6] - 2026-04-06
+- **🔗 Java 디버거 자동 설치**: `vscjava.vscode-java-debug` 를 익스텐션 의존성으로 추가.
+
 ## [1.0.5] - 2026-04-06
+- **🎯 Setup 성공 알림에 Start Tomcat 버튼 추가**.
 - **🔄 Restart Tomcat**: 한 번에 재시작하는 `Restart Tomcat` 커맨드 추가.
 - **🌍 크로스 플랫폼**: Mac/Linux용 `.sh` 스크립트 생성 및 `tasks.json` 플랫폼 분기 지원.
 - **🔨 빌드 연동**: `preLaunchBuild` 설정으로 Tomcat 시작 전 Maven/Gradle 빌드 자동 실행.

@@ -3,7 +3,7 @@
   "displayName": "Happy Spring Tomcat",
   "description": "Happy debugging for Spring projects (legacy) on Tomcat.",
   "publisher": "skay138",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "icon": "icon.ico",
   "engines": {
     "vscode": "^1.80.0"
@@ -31,6 +31,9 @@
   ],
   "activationEvents": [
     "onStartupFinished"
+  ],
+  "extensionDependencies": [
+    "vscjava.vscode-java-debug"
   ],
   "main": "./out/extension.js",
   "contributes": {
