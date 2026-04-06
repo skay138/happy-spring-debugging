@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { isTomcatRunning } from '../lib/portChecker';
 import { isInternalUpdate } from '../lib/state';
-
-const TOMCAT_DEBUG_CONFIG_NAME = 'Happy Spring Tomcat - Debug';
+import { STOP_TASK_NAME } from '../lib/constants';
+import { isTomcatDebugSession, resolveDebugConfigName } from '../lib/debugResolver';
 
 /**
  * Watches for the Tomcat debug session to start, then polls the HTTP port
@@ -16,13 +16,8 @@ export function registerAutoOpenBrowser(context: vscode.ExtensionContext): void 
         const config = vscode.workspace.getConfiguration('happySpringTomcat');
         const debugPort = config.get<number>('debugPort', 8000);
 
-        // Robust check: matches exact name OR is a java attach session for our port
-        const isExactMatch = session.name === TOMCAT_DEBUG_CONFIG_NAME;
-        const isJavaAttachForOurPort = session.type === 'java' &&
-            session.configuration.request === 'attach' &&
-            String(session.configuration.port) === String(debugPort);
-
-        if (!isExactMatch && !isJavaAttachForOurPort) { return; }
+        // Robust check: uses helper to match exact name OR java attach session for our port
+        if (!isTomcatDebugSession(session, debugPort)) { return; }
 
         if (!config.get<boolean>('autoOpenBrowser', true)) { return; }
 
@@ -93,7 +88,7 @@ export function registerStatusBar(context: vscode.ExtensionContext): void {
 
             // Stop: run Stop Tomcat task and wait for completion
             const tasks = await vscode.tasks.fetchTasks();
-            const stopTask = tasks.find(t => t.name === 'Stop Tomcat');
+            const stopTask = tasks.find(t => t.name === STOP_TASK_NAME);
             if (stopTask) {
                 const execution = await vscode.tasks.executeTask(stopTask);
                 await new Promise<void>(resolve => {
@@ -120,7 +115,15 @@ export function registerStatusBar(context: vscode.ExtensionContext): void {
             }
 
             // Start: attach debugger (which triggers Start Tomcat (JPDA) as preLaunchTask)
-            await vscode.debug.startDebugging(workspaceFolders[0], TOMCAT_DEBUG_CONFIG_NAME);
+            const configName = resolveDebugConfigName(workspaceFolders[0]);
+            if (configName) {
+                await vscode.debug.startDebugging(workspaceFolders[0], configName);
+            } else {
+                const selection = await vscode.window.showErrorMessage('Tomcat debug configuration not found. Please run Setup again.', 'Run Setup');
+                if (selection === 'Run Setup') {
+                    vscode.commands.executeCommand('happy-spring-tomcat.setup');
+                }
+            }
         })
     );
 
@@ -175,7 +178,7 @@ export function registerStatusBar(context: vscode.ExtensionContext): void {
         const items = [
             { label: '$(play) Start Tomcat (Attach Debug)', description: 'Launch and attach debugger', action: 'workbench.action.debug.start' },
             { label: '$(debug-restart) Restart Tomcat', description: 'Stop then re-launch Tomcat', action: 'happy-spring-tomcat.restart' },  // [Item 5]
-            { label: '$(primitive-square) Stop Tomcat', description: 'Kill Tomcat processes', action: 'workbench.action.tasks.runTask', args: 'Stop Tomcat' },
+            { label: '$(primitive-square) Stop Tomcat', description: 'Kill Tomcat processes', action: 'workbench.action.tasks.runTask', args: STOP_TASK_NAME },
             { label: '$(trash) Clear Tomcat Cache', description: 'Delete work/temp directory contents', action: 'happy-spring-tomcat.clearCache' },
             { label: '$(list-unordered) View Latest Logs', description: 'Open the most recent log file', action: 'happy-spring-tomcat.viewLogs' },
             { label: '$(check-all) Apply Debug Setup', description: 'Apply settings to debug setup', action: 'happy-spring-tomcat.setup' },
@@ -192,7 +195,15 @@ export function registerStatusBar(context: vscode.ExtensionContext): void {
         } else if (selected.action === 'workbench.action.debug.start') {
             const workspaceFolders = vscode.workspace.workspaceFolders;
             if (workspaceFolders) {
-                vscode.debug.startDebugging(workspaceFolders[0], TOMCAT_DEBUG_CONFIG_NAME);
+                const configName = resolveDebugConfigName(workspaceFolders[0]);
+                if (configName) {
+                    vscode.debug.startDebugging(workspaceFolders[0], configName);
+                } else {
+                    const selection = await vscode.window.showErrorMessage('Tomcat debug configuration not found. Please run Setup again.', 'Run Setup');
+                    if (selection === 'Run Setup') {
+                        vscode.commands.executeCommand('happy-spring-tomcat.setup');
+                    }
+                }
             }
         } else {
             vscode.commands.executeCommand(selected.action);

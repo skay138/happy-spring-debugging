@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { TOMCAT_DEBUG_CONFIG_NAME, START_TASK_NAME, STOP_TASK_NAME } from './constants';
 
 export interface ConfigWriterOptions {
     tomcatHome: string;
@@ -325,7 +326,7 @@ export function writeTasksJson(vscodeDir: string, preLaunchBuild: string = 'none
 
     // Stop Tomcat task — platform-specific command
     const stopTaskDef: any = {
-        label: 'Stop Tomcat',
+        label: STOP_TASK_NAME,
         type: 'shell',
         command: '${workspaceFolder}/.vscode/happy-spring-tomcat/stop-tomcat.sh',
         windows: { command: '${workspaceFolder}\\.vscode\\happy-spring-tomcat\\stop-tomcat.bat' },
@@ -334,7 +335,7 @@ export function writeTasksJson(vscodeDir: string, preLaunchBuild: string = 'none
 
     // Start Tomcat task — platform-specific command + optional dependsOn
     const startTaskDef: any = {
-        label: 'Start Tomcat (JPDA)',
+        label: START_TASK_NAME,
         type: 'shell',
         command: '${workspaceFolder}/.vscode/happy-spring-tomcat/start-tomcat.sh',
         windows: { command: '${workspaceFolder}\\.vscode\\happy-spring-tomcat\\start-tomcat.bat' },
@@ -368,8 +369,8 @@ export function writeTasksJson(vscodeDir: string, preLaunchBuild: string = 'none
         startTaskDef.dependsOn = ['Gradle Build'];
     }
 
-    upsertByLabel(tasksJson.tasks, 'Stop Tomcat', stopTaskDef, true);
-    upsertByLabel(tasksJson.tasks, 'Start Tomcat (JPDA)', startTaskDef, false);
+    upsertByLabel(tasksJson.tasks, STOP_TASK_NAME, stopTaskDef, true);
+    upsertByLabel(tasksJson.tasks, START_TASK_NAME, startTaskDef, false);
 
     fs.writeFileSync(tasksJsonPath, JSON.stringify(tasksJson, null, 4), 'utf8');
 }
@@ -387,15 +388,15 @@ export function writeLaunchJson(vscodeDir: string, debugPort: number, httpPort: 
 
     if (!launchJson.configurations) { launchJson.configurations = []; }
 
-    const launchName = 'Happy Spring Tomcat - Debug';
+    const launchName = TOMCAT_DEBUG_CONFIG_NAME;
     const launchConfigDef: any = {
         type: 'java',
         name: launchName,
         request: 'attach',
         hostName: 'localhost',
         port: debugPort,
-        preLaunchTask: 'Start Tomcat (JPDA)',
-        postDebugTask: 'Stop Tomcat',
+        preLaunchTask: START_TASK_NAME,
+        postDebugTask: STOP_TASK_NAME,
         internalConsoleOptions: 'neverOpen'
     };
 

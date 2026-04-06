@@ -3,7 +3,7 @@
   "displayName": "Happy Spring Tomcat",
   "description": "Happy debugging for Spring projects (legacy) on Tomcat.",
   "publisher": "skay138",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "icon": "icon.ico",
   "engines": {
     "vscode": "^1.80.0"
@@ -30,7 +30,9 @@
     "scaffold"
   ],
   "activationEvents": [
-    "onStartupFinished"
+    "workspaceContains:pom.xml",
+    "workspaceContains:build.gradle",
+    "workspaceContains:**/WEB-INF/web.xml"
   ],
   "extensionDependencies": [
     "vscjava.vscode-java-debug"
@@ -103,7 +105,7 @@
             "type": "boolean",
             "default": true,
             "order": 8,
-            "markdownDescription": "상태 표시줄에 🚀 톰캣 단축 메뉴 아이콘을 표시합니다."
+            "markdownDescription": "상태 표시줄에 Tomcat 단축 메뉴 아이콘을 표시합니다."
           }
         }
       },

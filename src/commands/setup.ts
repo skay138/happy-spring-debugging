@@ -6,6 +6,7 @@ import { findDocBaseCandidates } from '../lib/docBaseFinder';
 import { setupTomcatBaseDir, writeServerXml, writeContextXml, writeScripts, writeTasksJson, writeLaunchJson, ConfigWriterOptions } from '../lib/configWriter';
 import { isTomcatRunning } from '../lib/portChecker';
 import { markInternalUpdate, clearInternalUpdate } from '../lib/state';
+import { resolveDebugConfigName } from '../lib/debugResolver';
 
 export function registerSetupCommand(context: vscode.ExtensionContext): void {
     const disposable = vscode.commands.registerCommand('happy-spring-tomcat.setup', async () => {
@@ -123,7 +124,12 @@ export function registerSetupCommand(context: vscode.ExtensionContext): void {
             'Start Tomcat'
         );
         if (action === 'Start Tomcat') {
-            vscode.debug.startDebugging(workspaceFolders[0], 'Happy Spring Tomcat - Debug');
+            const configName = resolveDebugConfigName(workspaceFolders[0]);
+            if (configName) {
+                vscode.debug.startDebugging(workspaceFolders[0], configName);
+            } else {
+                vscode.window.showErrorMessage('Tomcat debug configuration not found.');
+            }
         }
     });
 

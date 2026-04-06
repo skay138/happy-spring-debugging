@@ -2,6 +2,9 @@
 
 All notable changes to "Happy Spring Tomcat" will be documented in this file.
 
+## [1.0.7] - 2026-04-06
+- **⚡ 성능 최적화**: 일반 프로젝트(Python, Node.js 등)에서는 확장이 로드되지 않도록 개선.
+
 ## [1.0.6] - 2026-04-06
 - **🔗 Java 디버거 자동 설치**: `vscjava.vscode-java-debug` 를 익스텐션 의존성으로 추가.
 
