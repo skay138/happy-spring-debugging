@@ -49,7 +49,7 @@ export function registerStatusBar(context: vscode.ExtensionContext): void {
     context.subscriptions.push(statusBarItem);
 
     const initialConfig = vscode.workspace.getConfiguration('happySpringTomcat');
-    if (initialConfig.get<boolean>('showStatusBarIcon', true)) {
+    if (initialConfig.get<boolean>('showStatusBar', true)) {
         statusBarItem.show();
     }
 
@@ -132,9 +132,9 @@ export function registerStatusBar(context: vscode.ExtensionContext): void {
     const configListener = vscode.workspace.onDidChangeConfiguration(e => {
         if (!e.affectsConfiguration('happySpringTomcat')) { return; }
 
-        if (e.affectsConfiguration('happySpringTomcat.showStatusBarIcon')) {
+        if (e.affectsConfiguration('happySpringTomcat.showStatusBar')) {
             const updatedConfig = vscode.workspace.getConfiguration('happySpringTomcat');
-            if (updatedConfig.get<boolean>('showStatusBarIcon', true)) {
+            if (updatedConfig.get<boolean>('showStatusBar', true)) {
                 statusBarItem.show();
             } else {
                 statusBarItem.hide();
