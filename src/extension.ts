@@ -3,7 +3,7 @@ import { registerSetupCommand } from './commands/setup';
 import { registerSelectTomcatHomeCommand } from './commands/selectTomcatHome';
 import { registerSelectDocBaseCommand } from './commands/selectDocBase';
 import { registerMaintenanceCommands } from './commands/maintenance';
-import { registerStatusBar } from './commands/statusBar';
+import { registerStatusBar, registerAutoOpenBrowser } from './commands/statusBar';
 
 export function activate(context: vscode.ExtensionContext) {
     registerSetupCommand(context);
@@ -11,6 +11,8 @@ export function activate(context: vscode.ExtensionContext) {
     registerSelectDocBaseCommand(context);
     registerMaintenanceCommands(context);
     registerStatusBar(context);
+    registerAutoOpenBrowser(context);
 }
+
 
 export function deactivate() {}

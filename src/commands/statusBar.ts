@@ -2,6 +2,51 @@ import * as vscode from 'vscode';
 import { isTomcatRunning } from '../lib/portChecker';
 import { isInternalUpdate } from '../lib/state';
 
+const TOMCAT_DEBUG_CONFIG_NAME = 'Happy Spring Tomcat - Debug';
+
+/**
+ * Watches for the Tomcat debug session to start, then polls the HTTP port
+ * until Tomcat is ready, and opens the browser via vscode.env.openExternal.
+ *
+ * This is the correct extension-native approach instead of serverReadyAction,
+ * which does not work for request: "attach" launch configurations.
+ */
+export function registerAutoOpenBrowser(context: vscode.ExtensionContext): void {
+    const listener = vscode.debug.onDidStartDebugSession(async (session) => {
+        const config = vscode.workspace.getConfiguration('happySpringTomcat');
+        const debugPort = config.get<number>('debugPort', 8000);
+
+        // Robust check: matches exact name OR is a java attach session for our port
+        const isExactMatch = session.name === TOMCAT_DEBUG_CONFIG_NAME;
+        const isJavaAttachForOurPort = session.type === 'java' &&
+            session.configuration.request === 'attach' &&
+            String(session.configuration.port) === String(debugPort);
+
+        if (!isExactMatch && !isJavaAttachForOurPort) { return; }
+
+        if (!config.get<boolean>('autoOpenBrowser', true)) { return; }
+
+        const httpPort = config.get<number>('httpPort', 8080);
+        const contextPath = config.get<string>('contextPath', '/');
+        const normalizedContext = contextPath.startsWith('/') ? contextPath : '/' + contextPath;
+        const url = `http://localhost:${httpPort}${normalizedContext}`;
+
+        // Poll until the HTTP port is accepting connections (max 60 seconds)
+        const maxAttempts = 60;
+        const intervalMs = 1000;
+        for (let i = 0; i < maxAttempts; i++) {
+            await new Promise(resolve => setTimeout(resolve, intervalMs));
+            const running = await isTomcatRunning(httpPort);
+            if (running) {
+                vscode.env.openExternal(vscode.Uri.parse(url));
+                return;
+            }
+        }
+    });
+
+    context.subscriptions.push(listener);
+}
+
 export function registerStatusBar(context: vscode.ExtensionContext): void {
     // --- Status Bar Item ---
     const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
@@ -15,7 +60,7 @@ export function registerStatusBar(context: vscode.ExtensionContext): void {
 
     // [Item 4] Helper to update status bar text/tooltip based on running state
     function updateStatusBar(running: boolean): void {
-        statusBarItem.text = running ? '$(rocket) Tomcat $(check)' : '$(rocket) Tomcat';
+        statusBarItem.text = running ? '$(list-flat) Tomcat $(server)' : '$(list-flat) Tomcat';
         statusBarItem.tooltip = running
             ? `Tomcat is running — Click for menu`
             : `Tomcat is stopped — Click for menu`;
@@ -75,7 +120,7 @@ export function registerStatusBar(context: vscode.ExtensionContext): void {
             }
 
             // Start: attach debugger (which triggers Start Tomcat (JPDA) as preLaunchTask)
-            await vscode.debug.startDebugging(workspaceFolders[0], '🚀 Tomcat — Attach Debug');
+            await vscode.debug.startDebugging(workspaceFolders[0], TOMCAT_DEBUG_CONFIG_NAME);
         })
     );
 
@@ -105,7 +150,6 @@ export function registerStatusBar(context: vscode.ExtensionContext): void {
             'happySpringTomcat.classesBase',
             'happySpringTomcat.jndiResources',
             'happySpringTomcat.colorizeLogs',
-            'happySpringTomcat.autoOpenBrowser',
             'happySpringTomcat.preLaunchBuild'
         ];
         if (settingsAffectingScripts.some(key => e.affectsConfiguration(key))) {
@@ -148,7 +192,7 @@ export function registerStatusBar(context: vscode.ExtensionContext): void {
         } else if (selected.action === 'workbench.action.debug.start') {
             const workspaceFolders = vscode.workspace.workspaceFolders;
             if (workspaceFolders) {
-                vscode.debug.startDebugging(workspaceFolders[0], '🚀 Tomcat — Attach Debug');
+                vscode.debug.startDebugging(workspaceFolders[0], TOMCAT_DEBUG_CONFIG_NAME);
             }
         } else {
             vscode.commands.executeCommand(selected.action);

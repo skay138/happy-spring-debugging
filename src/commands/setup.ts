@@ -123,7 +123,7 @@ export function registerSetupCommand(context: vscode.ExtensionContext): void {
             'Start Tomcat'
         );
         if (action === 'Start Tomcat') {
-            vscode.debug.startDebugging(workspaceFolders[0], '🚀 Tomcat — Attach Debug');
+            vscode.debug.startDebugging(workspaceFolders[0], 'Happy Spring Tomcat - Debug');
         }
     });
 
@@ -154,7 +154,7 @@ async function resolveDocBase(projectRoot: string, docBase: string): Promise<str
     if (pick !== 'Select docBase') { return null; }
 
     // [Item 2] selectDocBase returns the config string (may contain ${workspaceFolder})
-    const selectedDocBaseConfig = await vscode.commands.executeCommand<string>('happy-spring-tomcat.selectDocBase');
+    const selectedDocBaseConfig = await vscode.commands.executeCommand<string>('happy-spring-tomcat.selectDocBase', true);
     if (!selectedDocBaseConfig) { return null; }
 
     // Resolve ${workspaceFolder} to get an absolute path for this run

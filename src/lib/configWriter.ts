@@ -387,7 +387,7 @@ export function writeLaunchJson(vscodeDir: string, debugPort: number, httpPort: 
 
     if (!launchJson.configurations) { launchJson.configurations = []; }
 
-    const launchName = '🚀 Tomcat — Attach Debug';
+    const launchName = 'Happy Spring Tomcat - Debug';
     const launchConfigDef: any = {
         type: 'java',
         name: launchName,
@@ -399,13 +399,9 @@ export function writeLaunchJson(vscodeDir: string, debugPort: number, httpPort: 
         internalConsoleOptions: 'neverOpen'
     };
 
-    if (autoOpenBrowser) {
-        launchConfigDef.serverReadyAction = {
-            action: 'openExternally',
-            pattern: 'Server startup in',
-            uriFormat: `http://localhost:${httpPort}${contextPath.startsWith('/') ? contextPath : '/' + contextPath}`
-        };
-    }
+    // Note: serverReadyAction is intentionally omitted — it is not supported for
+    // request: "attach" configurations. Browser auto-open is handled by the
+    // extension itself via vscode.debug.onDidStartDebugSession + port polling.
 
     const idx = launchJson.configurations.findIndex((c: any) => c.name === launchName);
     if (idx >= 0) {

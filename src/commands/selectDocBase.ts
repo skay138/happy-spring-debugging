@@ -3,7 +3,7 @@ import { findDocBaseCandidates } from '../lib/docBaseFinder';
 import { markInternalUpdate, clearInternalUpdate } from '../lib/state';
 
 export function registerSelectDocBaseCommand(context: vscode.ExtensionContext): void {
-    const disposable = vscode.commands.registerCommand('happy-spring-tomcat.selectDocBase', async () => {
+    const disposable = vscode.commands.registerCommand('happy-spring-tomcat.selectDocBase', async (fromSetup?: boolean) => {
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders) { return undefined; }
 
@@ -25,9 +25,13 @@ export function registerSelectDocBaseCommand(context: vscode.ExtensionContext): 
         }
 
         const config = vscode.workspace.getConfiguration('happySpringTomcat');
-        markInternalUpdate();  // [Item 9] suppress config-change re-apply prompt
+        if (fromSetup) {
+            markInternalUpdate();
+        }
         await config.update('docBase', docBaseConfig, vscode.ConfigurationTarget.Workspace);
-        clearInternalUpdate();
+        if (fromSetup) {
+            clearInternalUpdate();
+        }
         vscode.window.showInformationMessage(`docBase set to: ${docBaseConfig}`);
         return docBaseConfig;
     });
